@@ -1,0 +1,20 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@/*": ["./*"]  // Alias to simplify imports from the project root.
+    },
+    "types": [
+      "@types/react", 
+      "@types/react-native", 
+      "./expo-env.d.ts"  
+    ]
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts","node_modules/@env"
+  ]
+}
