@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
-import {View,Text,FlatList,ActivityIndicator,Image,TouchableOpacity,StyleSheet,Modal,ScrollView,Linking,} from "react-native";
+import { useEffect, useState, useRef } from "react";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, ScrollView, Image, Linking, Animated, } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { MOODS } from "@/constants/moods";
 import { getMoviesByMood } from "@/services/movies";
+import MovieCard, { Movie } from "@/components/MovieCard";
+import SkeletonCard from "@/components/SkeletonCard";
 
 const GENRES_MAP: Record<number, string> = {
   28: "Action",
@@ -18,17 +20,7 @@ const GENRES_MAP: Record<number, string> = {
   53: "Thriller",
 };
 
-type Movie = {
-  id: number;
-  title?: string;
-  poster_path?: string | null;
-  release_date?: string;
-  genre_ids?: number[];
-  vote_average?: number;
-  overview?: string;
-};
-
-export default function ResultsScreen() {
+export default function MoviesResultsScreen() {
   const { mood } = useLocalSearchParams();
   const moodData = MOODS[mood as keyof typeof MOODS];
 
@@ -38,7 +30,42 @@ export default function ResultsScreen() {
   const [page, setPage] = useState(1);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
-  const loadMovies = async () => {   // Load movies based on the selected mood and current page for pagination.
+  const modalOpacity = useRef(new Animated.Value(0)).current;
+  const modalScale = useRef(new Animated.Value(0.8)).current;
+
+  // Animation functions for modal open
+  const animateModalOpen = () => {
+    Animated.parallel([
+      Animated.timing(modalOpacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.spring(modalScale, {
+        toValue: 1,
+        friction: 6,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  // Animation functions for modal close
+  const animateModalClose = (callback: () => void) => {
+    Animated.parallel([
+      Animated.timing(modalOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalScale, {
+        toValue: 0.8,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => callback());
+  };
+
+  const loadMovies = async () => {        // Load movies based on the selected mood and current page for pagination.
     if (!moodData) return;
     setLoading(true);
     setError("");
@@ -52,7 +79,12 @@ export default function ResultsScreen() {
         return;
       }
 
-      setMovies(data.slice(0, 10));
+      const formattedData: Movie[] = data.map((m: Movie & { genre_ids?: number[] }) => ({
+        ...m,
+        genres: m.genres ?? m.genre_ids?.map((id) => ({ id, name: GENRES_MAP[id] })) ?? [],
+      }));
+
+      setMovies(formattedData.slice(0, 10));
     } catch (err) {
       console.error(err);
       setError("Failed to load movies");
@@ -65,86 +97,88 @@ export default function ResultsScreen() {
     loadMovies();
   }, [moodData, page]);
 
+  useEffect(() => {
+    if (selectedMovie) animateModalOpen();       // When a movie card is pressed, set the selected movie and trigger the modal open animation.
+  }, [selectedMovie]);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{moodData?.label || "Movies"}</Text>
 
-      {loading && <ActivityIndicator size="large" color="#4f46e5" />}
-      {error && <Text style={styles.error}>{error}</Text>}
+      {loading && (
+        <FlatList
+          data={[...Array(6)]}
+          keyExtractor={(_, i) => i.toString()}
+          renderItem={() => <SkeletonCard />}
+          numColumns={2}
+          columnWrapperStyle={{ justifyContent: "space-between", marginBottom: 20 }}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        />
+      )}
+
+      {!loading && error ? <Text style={styles.error}>{error}</Text> : null}
 
       <FlatList
         data={movies}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => {
-          const title = item.title || "";
-          return (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => setSelectedMovie(item)}   // When a movie card is pressed, set the selected movie to show details in a modal.
-            >
-              {item.poster_path ? (
-                <Image
-                  source={{ uri: `https://image.tmdb.org/t/p/w500${item.poster_path}` }}
-                  style={styles.poster}
-                />
-              ) : (
-                <View style={[styles.poster, styles.noPoster]}>
-                  <Text>No Image</Text>
-                </View>
-              )}
-              <Text style={styles.cardTitle}>{title}</Text>
-            </TouchableOpacity>
-          );
-        }}
+        renderItem={({ item }) => <MovieCard movie={item} onPress={() => setSelectedMovie(item)} />}
         numColumns={2}
         columnWrapperStyle={{ justifyContent: "space-between", marginBottom: 20 }}
         contentContainerStyle={{ paddingBottom: 20 }}
       />
 
       {!loading && (
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => setPage((prev) => prev + 1)}
-        >
+        <TouchableOpacity style={styles.button} onPress={() => setPage((prev) => prev + 1)}>
           <Text style={styles.buttonText}>New Movies</Text>
         </TouchableOpacity>
       )}
 
-      <Modal
-        visible={!!selectedMovie}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setSelectedMovie(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <ScrollView>
-              <Text style={styles.modalTitle}>{selectedMovie?.title}</Text>
-              <Text style={styles.modalInfo}>
-                Genres: {selectedMovie?.genre_ids?.map((id) => GENRES_MAP[id]).filter(Boolean).join(", ")}   {/* Display genres by mapping genre IDs to names. */}
-              </Text>
-              {typeof selectedMovie?.vote_average === "number" && (
-                <Text style={styles.modalInfo}>⭐ {selectedMovie.vote_average?.toFixed(1)}</Text>
+      <Modal transparent visible={!!selectedMovie} onRequestClose={() => selectedMovie && animateModalClose(() => setSelectedMovie(null))}>
+        <Animated.View style={[styles.modalOverlay, { opacity: modalOpacity }]}>
+          <Animated.View style={[styles.modalContent, { transform: [{ scale: modalScale }] }]}>
+            <ScrollView contentContainerStyle={{ paddingBottom: 20, alignItems: "center" }}>
+              {selectedMovie?.poster_path && (
+                <Image
+                  source={{ uri: `https://image.tmdb.org/t/p/w500${selectedMovie.poster_path}` }}
+                  style={styles.modalPoster}
+                  resizeMode="cover"
+                />
               )}
+
+              <Text style={styles.modalTitle}>{selectedMovie?.title}</Text>
+
+              {selectedMovie?.genres && selectedMovie.genres.length > 0 && (
+                <Text style={styles.modalInfo}>
+                  Genres: {selectedMovie.genres.map((g) => g.name).join(", ")}
+                </Text>
+              )}
+
+              {typeof selectedMovie?.vote_average === "number" && (
+                <Text style={styles.modalInfo}>⭐ {selectedMovie.vote_average.toFixed(1)}</Text>
+              )}
+
               {selectedMovie?.overview && (
                 <Text style={styles.modalOverview}>{selectedMovie.overview}</Text>
               )}
-              <TouchableOpacity
-                onPress={() =>
-                  Linking.openURL(`https://www.themoviedb.org/movie/${selectedMovie?.id}`)   // Opens the movie's page on TMDB in the browser.
-                }
-              >
-                <Text style={styles.link}>Go to TMDB</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, { marginTop: 20 }]}
-                onPress={() => setSelectedMovie(null)}
-              >
-                <Text style={styles.buttonText}>Close</Text>
-              </TouchableOpacity>
+
+              {selectedMovie?.id && (
+                <TouchableOpacity
+                  onPress={() => Linking.openURL(`https://www.themoviedb.org/movie/${selectedMovie.id}`)} //// Opens the movie's page on TMDB in the browser.
+                  style={{ marginTop: 10 }}
+                >
+                  <Text style={{ color: "#4f46e5", fontWeight: "600" }}>Go to TMDB</Text>
+                </TouchableOpacity>
+              )}
             </ScrollView>
-          </View>
-        </View>
+
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => selectedMovie && animateModalClose(() => setSelectedMovie(null))}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </Animated.View>
       </Modal>
     </View>
   );
@@ -152,18 +186,17 @@ export default function ResultsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#f9fafb" },
-  title: { fontSize: 26, fontWeight: "bold", marginBottom: 15, color: "#4f46e5" },
-  card: { width: "48%", marginBottom: 10 },
-  poster: { width: "100%", aspectRatio: 2 / 3, borderRadius: 10 },
-  noPoster: { backgroundColor: "#d1d5db", justifyContent: "center", alignItems: "center" },
-  cardTitle: { fontSize: 14, fontWeight: "600", marginTop: 5 },
-  button: { backgroundColor: "#4f46e5", padding: 12, borderRadius: 8, alignItems: "center" },
+  title: { fontSize: 24, fontWeight: "bold", marginBottom: 15, color: "#4f46e5", textAlign: "center" },
+  button: { backgroundColor: "#4f46e5", padding: 12, borderRadius: 8, alignItems: "center", marginTop: 10 },
   buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
   error: { color: "red", marginVertical: 10 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", padding: 20 },
-  modalContent: { backgroundColor: "#fff", borderRadius: 12, padding: 20, maxHeight: "80%" },
-  modalTitle: { fontSize: 20, fontWeight: "700", marginBottom: 10 },
-  modalInfo: { fontSize: 14, marginBottom: 5 },
-  modalOverview: { fontSize: 14, marginTop: 10, color: "#333" },
-  link: { marginTop: 10, fontSize: 14, fontWeight: "600", color: "#4f46e5" },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" },
+  modalContent: { width: "90%", backgroundColor: "#fff", borderRadius: 12, maxHeight: "80%", padding: 20, alignItems: "center" },
+  modalPoster: { width: "100%", aspectRatio: 2 / 3, borderRadius: 10, marginBottom: 10, height: 350, alignSelf: "center" },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
+  modalInfo: { fontSize: 13, marginBottom: 5 },
+  modalOverview: { fontSize: 13, marginTop: 8, color: "#333" },
+  link: { marginTop: 10, fontSize: 13, fontWeight: "600", color: "#4f46e5" },
+  modalCloseButton: { backgroundColor: "#4f46e5", paddingVertical: 14, paddingHorizontal: 100, borderRadius: 12, alignItems: "center", marginTop: 10 },
+  modalCloseText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

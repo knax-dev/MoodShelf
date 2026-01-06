@@ -1,30 +1,53 @@
-import { useEffect, useState } from "react";
-import { View,Text,FlatList,Pressable,Image,ActivityIndicator,Linking,StyleSheet } from "react-native";
+import { useEffect, useState, useRef } from "react";
+import { View, Text, FlatList, Pressable, Modal, StyleSheet, Linking, ScrollView, Image, Animated, } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MOODS } from "@/constants/moods";
 import { getBooksByMood } from "@/services/books";
-
-interface VolumeInfo {
-  title: string;
-  authors?: string[];
-  publishedDate?: string;
-  imageLinks?: { thumbnail?: string };
-  infoLink?: string;
-}
-
-interface GoogleBook {
-  id: string;
-  volumeInfo: VolumeInfo;
-}
+import { BookCard } from "@/components/BookCard";
+import SkeletonCard from "@/components/SkeletonCard";
+import { Book } from "@/types/book";
 
 export default function BooksResultsScreen() {
   const { mood } = useLocalSearchParams();    // Hook Expo Router that allows you to get parameters from a URL.
   const router = useRouter();
-  const moodData = MOODS[mood as keyof typeof MOODS];    // startIndex indicates which book to start fetching and is used for pagination.
+  const moodData = MOODS[mood as keyof typeof MOODS];   // startIndex indicates which book to start fetching and is used for pagination.
 
-  const [books, setBooks] = useState<GoogleBook[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [startIndex, setStartIndex] = useState(0);
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const modalOpacity = useRef(new Animated.Value(0)).current;
+  const modalScale = useRef(new Animated.Value(0.8)).current;
+
+  const animateModalOpen = () => {
+    Animated.parallel([
+      Animated.timing(modalOpacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.spring(modalScale, {
+        toValue: 1,
+        friction: 6,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const animateModalClose = (callback: () => void) => {
+    Animated.parallel([
+      Animated.timing(modalOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalScale, {
+        toValue: 0.8,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => callback());
+  };
 
   if (!moodData) {
     return (
@@ -33,7 +56,9 @@ export default function BooksResultsScreen() {
         {Object.entries(MOODS).map(([key, moodItem]) => (
           <Pressable
             key={key}
-            onPress={() => router.push({ pathname: "/books-results", params: { mood: key } })}
+            onPress={() =>
+              router.push({ pathname: "/books-results", params: { mood: key } })
+            }
             style={({ pressed }) => ({
               padding: 16,
               backgroundColor: pressed ? "#d1d5db" : "#e5e7eb",
@@ -51,7 +76,7 @@ export default function BooksResultsScreen() {
     );
   }
 
-  // fetchbooks based on the mood and pagination index.
+   // Fetch books by mood with pagination
   const fetchBooks = async (newIndex = 0) => {
     setLoading(true);
     try {
@@ -70,47 +95,34 @@ export default function BooksResultsScreen() {
     fetchBooks(0);
   }, [moodData]);
 
-  const renderBook = ({ item }: { item: GoogleBook }) => {
-    const volume = item.volumeInfo;
-    return (
-      <Pressable
-        style={styles.card}
-        onPress={() => volume.infoLink && Linking.openURL(volume.infoLink)}
-      >
-        {/* Clicking on it will open a link to the book on Google Books. */}
-        {volume.imageLinks?.thumbnail ? (
-          <Image source={{ uri: volume.imageLinks.thumbnail }} style={styles.poster} />
-        ) : (
-          <View style={[styles.poster, styles.noPoster]}>
-            <Text style={{ color: "#555" }}>No Image</Text>
-          </View>
-        )}
-
-        {/* Display the book's thumbnail image if available. */}
-        <Text style={styles.cardTitle} numberOfLines={2}>
-          {volume.title || ""}
-        </Text>
-
-        {volume.publishedDate && (
-          <Text style={styles.date}>{volume.publishedDate}</Text>
-        )}
-      </Pressable>
-    );
-  };
+  useEffect(() => {
+    if (selectedBook) animateModalOpen();
+  }, [selectedBook]);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>
-        {typeof moodData.label === 'string' ? moodData.label : ''}
+        {typeof moodData.label === "string" ? moodData.label : ""}
       </Text>
 
-      {loading && <ActivityIndicator size="large" color="#4f46e5" />}
-       
-    {/* FlatList is optimized for large lists. */}
+      {loading && (
+        <FlatList
+          data={[...Array(6)]}
+          keyExtractor={(_, i) => i.toString()}
+          renderItem={() => <SkeletonCard />}
+          numColumns={2}
+          columnWrapperStyle={{ justifyContent: "space-between", marginBottom: 20 }}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        />
+      )}
+
+      {!loading && books.length === 0 && <Text style={styles.error}>No books found</Text>}
+
+     {/* FlatList is optimized for large lists. */}
       <FlatList
         data={books}
         keyExtractor={(item) => item.id}
-        renderItem={renderBook}
+        renderItem={({ item }) => <BookCard book={item} onPress={() => setSelectedBook(item)} />}
         numColumns={2}
         columnWrapperStyle={{ justifyContent: "space-between", marginBottom: 20 }}
         contentContainerStyle={{ paddingBottom: 20 }}
@@ -121,19 +133,66 @@ export default function BooksResultsScreen() {
           <Text style={styles.buttonText}>New Books</Text>
         </Pressable>
       )}
+
+      <Modal
+        transparent
+        visible={!!selectedBook}
+        onRequestClose={() =>
+          selectedBook && animateModalClose(() => setSelectedBook(null))
+        }
+      >
+        <Animated.View style={[styles.modalOverlay, { opacity: modalOpacity }]}>
+          <Animated.View style={[styles.modalContent, { transform: [{ scale: modalScale }] }]}>
+            <ScrollView contentContainerStyle={{ paddingBottom: 20, alignItems: "center" }}>
+              {selectedBook?.volumeInfo.imageLinks?.thumbnail && (
+                <Image
+                  source={{ uri: selectedBook.volumeInfo.imageLinks.thumbnail }}
+                  style={styles.modalPoster}
+                />
+              )}
+
+              <Text style={styles.modalTitle}>{selectedBook?.volumeInfo.title}</Text>
+
+              {selectedBook?.volumeInfo.description && (
+                <Text style={styles.modalOverview}>{selectedBook.volumeInfo.description}</Text>
+              )}
+
+              {selectedBook?.volumeInfo?.infoLink && (
+                <Pressable
+                  onPress={() => Linking.openURL(selectedBook.volumeInfo.infoLink!)}
+                  style={{ marginTop: 10 }}
+                >
+                  <Text style={{ color: "#4f46e5", fontWeight: "600" }}>
+                    Open in Google Books
+                  </Text>
+                </Pressable>
+              )}
+            </ScrollView>
+
+            <Pressable
+              style={styles.modalCloseButton}
+              onPress={() => selectedBook && animateModalClose(() => setSelectedBook(null))}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#f9fafb" },
-  title: { fontSize: 26, fontWeight: "bold", marginBottom: 15, color: "#4f46e5", textAlign: "center" },
-  card: { width: "48%", backgroundColor: "#fff", borderRadius: 12, padding: 8,
-  marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 5 },
-  poster: { width: "100%", aspectRatio: 2 / 3, borderRadius: 8, marginBottom: 8 },
-  noPoster: { backgroundColor: "#d1d5db", justifyContent: "center", alignItems: "center" },
-  cardTitle: { fontSize: 14, fontWeight: "700", color: "#111827" },
-  date: { fontSize: 12, color: "#9ca3af", marginTop: 1 },
-  button: { backgroundColor: "#4f46e5", padding: 14, borderRadius: 10, alignItems: "center", marginTop: 10 },
+  title: { fontSize: 24, fontWeight: "bold", marginBottom: 15, color: "#4f46e5", textAlign: "center" },
+  button: { backgroundColor: "#4f46e5", padding: 12, borderRadius: 8, alignItems: "center", marginTop: 10 },
   buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
+  error: { color: "red", marginVertical: 10 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" },
+  modalContent: { width: "90%", backgroundColor: "#fff", borderRadius: 12, maxHeight: "80%", padding: 20, alignItems: "center" },
+  modalPoster: { width: "100%", aspectRatio: 2 / 3, borderRadius: 10, marginBottom: 10, height: 350, alignSelf: "center" },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
+  modalOverview: { fontSize: 13, marginTop: 8, color: "#333" },
+  modalCloseButton: { backgroundColor: "#4f46e5", paddingVertical: 14, paddingHorizontal: 80, borderRadius: 12, alignItems: "center", marginTop: 10 },
+  modalCloseText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

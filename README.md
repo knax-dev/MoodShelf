@@ -14,20 +14,43 @@ The user selects a mood, and the app offers a selection of movies and books. You
 - Modal window for movie information
 - “Surprise Me” buttons for randomly selecting a mood for a movie or book
 - Support for dark and light themes 
-
+- Skeleton loaders while content is loading
+- Smooth animations and transitions
 
 ## Screenshots / GIF
 
-[Home Screen] -> ./assets/demo.gif 
-[Mood Selection Movie] -> ./assets/demo.gif 
-[Mood Selection Book] -> ./assets/demo.gif 
-[Movies Screen] -> ./assets/demo.gif 
-[Books Screen] -> ./assets/demo.gif 
-[Suprise Me Books] -> ./assets/demo.gif 
-[Suprise Me Movies] -> ./assets/demo.gif
-[Opening a modal window for movie details] -> ./assets/demo.gif 
-[Using "New Movies" button] -> ./assets/demo.gif 
-[Using "New Books" button] -> ./assets/demo.gif 
+- **Home Screen**
+ ![Screen where user selects what they want: Movies, Books, or uses "Suprise Me"] -> (./assets/demo.gif/Home_Screen.png)
+
+- **Mood Selection for Movies**
+ ![Screen where user selects their mood to get movie recommendations] -> (./assets/demo.gif/Mood_Selection_Movie.gif)
+
+- **Mood Selection for Books**
+ ![Screen where user selects their mood to get book recommendations] -> (./assets/demo.gif/Mood_Selection_Book.gif)
+
+- **Movies Screen**
+ ![Grid of movie recommendations based on selected mood] -> (./assets/demo.gif/Movies_Screen.gif)
+
+- **Books Screen**
+ ![Grid of book recommendations based on selected mood] -> (./assets/demo.gif/Books_Screen.gif)
+
+- **Suprise Me (Books)**
+ ![Pressing "Surprise Me" for books randomly selects mood and displays recommended books] -> (./assets/demo.gif/Suprise_Me_Books.gif)
+
+- **Suprise Me (Movies)**
+ ![Pressing "Suprise Me" for movies randomly selects mood and displays recommended movies] -> (./assets/demo.gif/Suprise_Me_Movies.gif)
+
+- **Movie Details Modal**
+ ![Modal window showing selected movie details including poster, genres, rating, and description, with link to TMDB] -> (./assets/demo.gif/Opening_a_modal_window_for_movie_details.gif)
+
+- **Book Details Modal**
+ ![Modal window showing selected book details including poster, description, with link to Google Books] -> (./assets/demo.gif/Opening_a_modal_window_for_book_details.gif)
+
+- **Using "New Movies" button**
+ ![Using "New Movies" button] -> (./assets/demo.gif/Using_New_Movies_button.gif)
+
+- **Using "New Books" button**
+ ![Using "New Books" button] -> (./assets/demo.gif/Using_New_Books_button.gif)
 
 ## Technologies
 
@@ -35,6 +58,7 @@ The user selects a mood, and the app offers a selection of movies and books. You
 - TypeScript
 - TMDB API
 - Google Books API
+- React Native Animated API
 
 
 ## Installation and Setup
@@ -77,3 +101,10 @@ You need your own API keys to run the app:
  TMDB API: https://developer.themoviedb.org/docs/getting-started
  Google Books API: https://developers.google.com/books
  Keys are not included in the repository. You must obtain your own keys.
+
+
+
+## Author 
+
+ - Created by: Oleksandr Tsariuk
+ - https://github.com/knax-dev
