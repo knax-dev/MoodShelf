@@ -20,37 +20,37 @@ The user selects a mood, and the app offers a selection of movies and books. You
 ## Screenshots / GIF
 
 - **Home Screen**
- ![Screen where user selects what they want: Movies, Books, or uses "Suprise Me"](./assets/demo/Home_Screen.png)
+ ![Screen where user selects what they want: Movies, Books, or uses "Suprise Me"](./assets/demo/HomeScreen.png)
 
 - **Mood Selection for Movies**
- ![Screen where user selects their mood to get movie recommendations](./assets/demo/Mood_Selection_Movie.gif)
+ ![Screen where user selects their mood to get movie recommendations](./assets/demo/MoodSelectionMovie.gif)
 
 - **Mood Selection for Books**
- ![Screen where user selects their mood to get book recommendations](./assets/demo/Mood_Selection_Book.gif)
+ ![Screen where user selects their mood to get book recommendations](./assets/demo/MoodSelectionBook.gif)
 
 - **Movies Screen**
- ![Grid of movie recommendations based on selected mood](./assets/demo/Movies_Screen.gif)
+ ![Grid of movie recommendations based on selected mood](./assets/demo/MoviesScreen.gif)
 
 - **Books Screen**
- ![Grid of book recommendations based on selected mood](./assets/demo/Books_Screen.gif)
+ ![Grid of book recommendations based on selected mood](./assets/demo/BooksScreen.gif)
 
 - **Suprise Me (Books)**
- ![Pressing "Surprise Me" for books randomly selects mood and displays recommended books](./assets/demo/Suprise_Me_Books.gif)
+ ![Pressing "Surprise Me" for books randomly selects mood and displays recommended books](./assets/demo/SupriseMeBooks.gif)
 
 - **Suprise Me (Movies)**
- ![Pressing "Suprise Me" for movies randomly selects mood and displays recommended movies](./assets/demo/Suprise_Me_Movies.gif)
+ ![Pressing "Suprise Me" for movies randomly selects mood and displays recommended movies](./assets/demo/SupriseMeMovies.gif)
 
 - **Movie Details Modal**
- ![Modal window showing selected movie details including poster, genres, rating, and description, with link to TMDB](./assets/demo/Opening_a_modal_window_for_movie_details.gif)
+ ![Modal window showing selected movie details including poster, genres, rating, and description, with link to TMDB](./assets/demo/Openingamodalwindowformoviedetails.gif)
 
 - **Book Details Modal**
- ![Modal window showing selected book details including poster, description, with link to Google Books](./assets/demo/Opening_a_modal_window_for_book_details.gif)
+ ![Modal window showing selected book details including poster, description, with link to Google Books](./assets/demo/Openingamodalwindowforbookdetails.gif)
 
 - **Using "New Movies" button**
- ![Using "New Movies" button](./assets/demo/Using_New_Movies_button.gif)
+ ![Using "New Movies" button](./assets/demo/UsingNewMoviesbutton.gif)
 
 - **Using "New Books" button**
- ![Using "New Books" button](./assets/demo/Using_New_Books_button.gif)
+ ![Using "New Books" button](./assets/demo/UsingNewBooksbutton.gif)
 
 ## Technologies
 
